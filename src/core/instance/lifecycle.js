@@ -15,7 +15,7 @@ import {
   remove,
   emptyObject,
   validateProp,
-  invokeWithErrorHandling
+  invokeWithErrorHandling,
 } from '../util/index'
 
 export let activeInstance: any = null
@@ -29,7 +29,7 @@ export function setActiveInstance(vm: Component) {
   }
 }
 
-export function initLifecycle (vm: Component) {
+export function initLifecycle(vm: Component) {
   const options = vm.$options
 
   // locate first non-abstract parent
@@ -55,90 +55,95 @@ export function initLifecycle (vm: Component) {
   vm._isBeingDestroyed = false
 }
 
-export function lifecycleMixin (Vue: Class<Component>) {
+export function lifecycleMixin(Vue: Class<Component>) {
+  // _update 方法的作用是把 VNode 渲染成真实的 DOM
+  // 首次渲染会调用,数据更新调用
   Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
     const vm: Component = this
     const prevEl = vm.$el
+    // 记录之前处理过VNode
     const prevVnode = vm._vnode
     const restoreActiveInstance = setActiveInstance(vm)
+    // 当前VNode
     vm._vnode = vnode
     // Vue.prototype.__patch__ is injected in entry points
     // based on the rendering backend used.
+    // 首次渲染的时候
     if (!prevVnode) {
       // initial render
       vm.$el = vm.__patch__(vm.$el, vnode, hydrating, false /* removeOnly */)
-    } else {
-      // updates
-      vm.$el = vm.__patch__(prevVnode, vnode)
     }
-    restoreActiveInstance()
-    // update __vue__ reference
-    if (prevEl) {
-      prevEl.__vue__ = null
-    }
-    if (vm.$el) {
-      vm.$el.__vue__ = vm
-    }
-    // if parent is an HOC, update its $el as well
-    if (vm.$vnode && vm.$parent && vm.$vnode === vm.$parent._vnode) {
-      vm.$parent.$el = vm.$el
-    }
-    // updated hook is called by the scheduler to ensure that children are
-    // updated in a parent's updated hook.
+    // updates
+    // 数据改变后prevVnode有值,然后patch最新的和之前的VNode, 返回真实dom
+    else vm.$el = vm.__patch__(prevVnode, vnode)
   }
-
-  Vue.prototype.$forceUpdate = function () {
-    const vm: Component = this
-    if (vm._watcher) {
-      vm._watcher.update()
-    }
+  restoreActiveInstance()
+  // update __vue__ reference
+  if (prevEl) {
+    prevEl.__vue__ = null
   }
+  if (vm.$el) {
+    vm.$el.__vue__ = vm
+  }
+  // if parent is an HOC, update its $el as well
+  if (vm.$vnode && vm.$parent && vm.$vnode === vm.$parent._vnode) {
+    vm.$parent.$el = vm.$el
+  }
+  // updated hook is called by the scheduler to ensure that children are
+  // updated in a parent's updated hook.
+}
 
-  Vue.prototype.$destroy = function () {
-    const vm: Component = this
-    if (vm._isBeingDestroyed) {
-      return
-    }
-    callHook(vm, 'beforeDestroy')
-    vm._isBeingDestroyed = true
-    // remove self from parent
-    const parent = vm.$parent
-    if (parent && !parent._isBeingDestroyed && !vm.$options.abstract) {
-      remove(parent.$children, vm)
-    }
-    // teardown watchers
-    if (vm._watcher) {
-      vm._watcher.teardown()
-    }
-    let i = vm._watchers.length
-    while (i--) {
-      vm._watchers[i].teardown()
-    }
-    // remove reference from data ob
-    // frozen object may not have observer.
-    if (vm._data.__ob__) {
-      vm._data.__ob__.vmCount--
-    }
-    // call the last hook...
-    vm._isDestroyed = true
-    // invoke destroy hooks on current rendered tree
-    vm.__patch__(vm._vnode, null)
-    // fire destroyed hook
-    callHook(vm, 'destroyed')
-    // turn off all instance listeners.
-    vm.$off()
-    // remove __vue__ reference
-    if (vm.$el) {
-      vm.$el.__vue__ = null
-    }
-    // release circular reference (#6759)
-    if (vm.$vnode) {
-      vm.$vnode.parent = null
-    }
+Vue.prototype.$forceUpdate = function () {
+  const vm: Component = this
+  if (vm._watcher) {
+    vm._watcher.update()
   }
 }
 
-export function mountComponent (
+Vue.prototype.$destroy = function () {
+  const vm: Component = this
+  if (vm._isBeingDestroyed) {
+    return
+  }
+  callHook(vm, 'beforeDestroy')
+  vm._isBeingDestroyed = true
+  // remove self from parent
+  const parent = vm.$parent
+  if (parent && !parent._isBeingDestroyed && !vm.$options.abstract) {
+    remove(parent.$children, vm)
+  }
+  // teardown watchers
+  if (vm._watcher) {
+    vm._watcher.teardown()
+  }
+  let i = vm._watchers.length
+  while (i--) {
+    vm._watchers[i].teardown()
+  }
+  // remove reference from data ob
+  // frozen object may not have observer.
+  if (vm._data.__ob__) {
+    vm._data.__ob__.vmCount--
+  }
+  // call the last hook...
+  vm._isDestroyed = true
+  // invoke destroy hooks on current rendered tree
+  vm.__patch__(vm._vnode, null)
+  // fire destroyed hook
+  callHook(vm, 'destroyed')
+  // turn off all instance listeners.
+  vm.$off()
+  // remove __vue__ reference
+  if (vm.$el) {
+    vm.$el.__vue__ = null
+  }
+  // release circular reference (#6759)
+  if (vm.$vnode) {
+    vm.$vnode.parent = null
+  }
+}
+
+export function mountComponent(
   vm: Component,
   el: ?Element,
   hydrating?: boolean
@@ -148,12 +153,15 @@ export function mountComponent (
     vm.$options.render = createEmptyVNode
     if (process.env.NODE_ENV !== 'production') {
       /* istanbul ignore if */
-      if ((vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
-        vm.$options.el || el) {
+      if (
+        (vm.$options.template && vm.$options.template.charAt(0) !== '#') ||
+        vm.$options.el ||
+        el
+      ) {
         warn(
           'You are using the runtime-only build of Vue where the template ' +
-          'compiler is not available. Either pre-compile the templates into ' +
-          'render functions, or use the compiler-included build.',
+            'compiler is not available. Either pre-compile the templates into ' +
+            'render functions, or use the compiler-included build.',
           vm
         )
       } else {
@@ -194,13 +202,19 @@ export function mountComponent (
   // we set this to vm._watcher inside the watcher's constructor
   // since the watcher's initial patch may call $forceUpdate (e.g. inside child
   // component's mounted hook), which relies on vm._watcher being already defined
-  new Watcher(vm, updateComponent, noop, {
-    before () {
-      if (vm._isMounted && !vm._isDestroyed) {
-        callHook(vm, 'beforeUpdate')
-      }
-    }
-  }, true /* isRenderWatcher */)
+  new Watcher(
+    vm,
+    updateComponent,
+    noop,
+    {
+      before() {
+        if (vm._isMounted && !vm._isDestroyed) {
+          callHook(vm, 'beforeUpdate')
+        }
+      },
+    },
+    true /* isRenderWatcher */
+  )
   hydrating = false
 
   // manually mounted instance, call mounted on self
@@ -212,7 +226,7 @@ export function mountComponent (
   return vm
 }
 
-export function updateChildComponent (
+export function updateChildComponent(
   vm: Component,
   propsData: ?Object,
   listeners: ?Object,
@@ -241,15 +255,16 @@ export function updateChildComponent (
   // update. Dynamic scoped slots may also have changed. In such cases, a forced
   // update is necessary to ensure correctness.
   const needsForceUpdate = !!(
-    renderChildren ||               // has new static slots
-    vm.$options._renderChildren ||  // has old static slots
+    renderChildren || // has new static slots
+    vm.$options._renderChildren || // has old static slots
     hasDynamicScopedSlot
   )
 
   vm.$options._parentVnode = parentVnode
   vm.$vnode = parentVnode // update vm's placeholder node without re-render
 
-  if (vm._vnode) { // update child tree's parent
+  if (vm._vnode) {
+    // update child tree's parent
     vm._vnode.parent = parentVnode
   }
   vm.$options._renderChildren = renderChildren
@@ -292,14 +307,14 @@ export function updateChildComponent (
   }
 }
 
-function isInInactiveTree (vm) {
+function isInInactiveTree(vm) {
   while (vm && (vm = vm.$parent)) {
     if (vm._inactive) return true
   }
   return false
 }
 
-export function activateChildComponent (vm: Component, direct?: boolean) {
+export function activateChildComponent(vm: Component, direct?: boolean) {
   if (direct) {
     vm._directInactive = false
     if (isInInactiveTree(vm)) {
@@ -317,7 +332,7 @@ export function activateChildComponent (vm: Component, direct?: boolean) {
   }
 }
 
-export function deactivateChildComponent (vm: Component, direct?: boolean) {
+export function deactivateChildComponent(vm: Component, direct?: boolean) {
   if (direct) {
     vm._directInactive = true
     if (isInInactiveTree(vm)) {
@@ -333,7 +348,7 @@ export function deactivateChildComponent (vm: Component, direct?: boolean) {
   }
 }
 
-export function callHook (vm: Component, hook: string) {
+export function callHook(vm: Component, hook: string) {
   // #7573 disable dep collection when invoking lifecycle hooks
   pushTarget()
   const handlers = vm.$options[hook]

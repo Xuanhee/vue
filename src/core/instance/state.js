@@ -42,6 +42,7 @@ export function proxy (target: Object, sourceKey: string, key: string) {
   sharedPropertyDefinition.set = function proxySetter (val) {
     this[sourceKey][key] = val
   }
+  // 最终将当前属性注入到 Vue实例中
   Object.defineProperty(target, key, sharedPropertyDefinition)
 }
 
@@ -61,6 +62,7 @@ export function initState (vm: Component) {
   }
 }
 
+// 将props转变成响应式数据,并注入到Vue实例中
 function initProps (vm: Component, propsOptions: Object) {
   const propsData = vm.$options.propsData || {}
   const props = vm._props = {}
@@ -111,6 +113,8 @@ function initProps (vm: Component, propsOptions: Object) {
 
 function initData (vm: Component) {
   let data = vm.$options.data
+  // 初始化 _data,组件中 data 是函数, 调用函数返回结果
+  // 否则直接返回 data
   data = vm._data = typeof data === 'function'
     ? getData(data, vm)
     : data || {}
@@ -123,10 +127,13 @@ function initData (vm: Component) {
     )
   }
   // proxy data on instance
+  // 获取data中的所有属性
   const keys = Object.keys(data)
+  // 获取props/methods
   const props = vm.$options.props
   const methods = vm.$options.methods
   let i = keys.length
+  // 判断 data 上的成员是否和 props/methods 重名
   while (i--) {
     const key = keys[i]
     if (process.env.NODE_ENV !== 'production') {
@@ -144,10 +151,12 @@ function initData (vm: Component) {
         vm
       )
     } else if (!isReserved(key)) {
+      // 如果不是以 _ 或 $ 开头, 把data中当前的这个属性注入的Vue实例中
       proxy(vm, `_data`, key)
     }
   }
   // observe data
+  // 响应式处理入口
   observe(data, true /* asRootData */)
 }
 
@@ -260,9 +269,11 @@ function createGetterInvoker(fn) {
 }
 
 function initMethods (vm: Component, methods: Object) {
+  // 先获取props
   const props = vm.$options.props
   for (const key in methods) {
     if (process.env.NODE_ENV !== 'production') {
+      // methods中的成员必须是function
       if (typeof methods[key] !== 'function') {
         warn(
           `Method "${key}" has type "${typeof methods[key]}" in the component definition. ` +
@@ -270,6 +281,7 @@ function initMethods (vm: Component, methods: Object) {
           vm
         )
       }
+      // props和methods不能有同名
       if (props && hasOwn(props, key)) {
         warn(
           `Method "${key}" has already been defined as a prop.`,
@@ -290,6 +302,7 @@ function initMethods (vm: Component, methods: Object) {
 function initWatch (vm: Component, watch: Object) {
   for (const key in watch) {
     const handler = watch[key]
+    // 可以传个数组
     if (Array.isArray(handler)) {
       for (let i = 0; i < handler.length; i++) {
         createWatcher(vm, key, handler[i])
@@ -306,7 +319,9 @@ function createWatcher (
   handler: any,
   options?: Object
 ) {
+  // 判断是否是对象
   if (isPlainObject(handler)) {
+    // 如果是对象,取出数据
     options = handler
     handler = handler.handler
   }
@@ -336,31 +351,40 @@ export function stateMixin (Vue: Class<Component>) {
       warn(`$props is readonly.`, this)
     }
   }
+  // 给Vue原型上挂载 $data 和 $props
   Object.defineProperty(Vue.prototype, '$data', dataDef)
   Object.defineProperty(Vue.prototype, '$props', propsDef)
 
   Vue.prototype.$set = set
   Vue.prototype.$delete = del
 
+  // 实例方法
   Vue.prototype.$watch = function (
     expOrFn: string | Function,
     cb: any,
     options?: Object
   ): Function {
+    // 获取Vue 实例 this
     const vm: Component = this
+    // 判断如果 cb 是对象执行 createWatcher
     if (isPlainObject(cb)) {
       return createWatcher(vm, expOrFn, cb, options)
     }
     options = options || {}
+    // 标记为用户 watcher
     options.user = true
+    // 创建用户 watcher 对象
     const watcher = new Watcher(vm, expOrFn, cb, options)
+    // 判断 immediate 如果为true
     if (options.immediate) {
+      // 立即执行一次 cb回调，并且把当前值传入
       try {
         cb.call(vm, watcher.value)
       } catch (error) {
         handleError(error, vm, `callback for immediate watcher "${watcher.expression}"`)
       }
     }
+    // 取消监听器
     return function unwatchFn () {
       watcher.teardown()
     }

@@ -27,6 +27,7 @@ const weexFactoryPlugin = {
 
 const aliases = require('./alias')
 const resolve = p => {
+    // 根据路径中的前半部分去alias中找别名
   const base = p.split('/')[0]
   if (aliases[base]) {
     return path.resolve(aliases[base], p.slice(base.length + 1))
@@ -213,6 +214,7 @@ const builds = {
   }
 }
 
+// 生成配置对象函数 传入process.env.TARGET
 function genConfig (name) {
   const opts = builds[name]
   const config = {
@@ -263,6 +265,8 @@ function genConfig (name) {
   return config
 }
 
+// 判断环境变量是否有 TARGET
+// 如果有的话 使用 genConfig() 生成rollup 配置文件
 if (process.env.TARGET) {
   module.exports = genConfig(process.env.TARGET)
 } else {

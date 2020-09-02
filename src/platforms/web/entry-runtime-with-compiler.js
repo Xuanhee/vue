@@ -7,35 +7,48 @@ import { mark, measure } from 'core/util/perf'
 import Vue from './runtime/index'
 import { query } from './util/index'
 import { compileToFunctions } from './compiler/index'
-import { shouldDecodeNewlines, shouldDecodeNewlinesForHref } from './util/compat'
+import {
+  shouldDecodeNewlines,
+  shouldDecodeNewlinesForHref,
+} from './util/compat'
+import html from './compiler/directives/html'
 
-const idToTemplate = cached(id => {
+const idToTemplate = cached((id) => {
   const el = query(id)
   return el && el.innerHTML
 })
 
+// 保留 Vue 实例的 $mount 方法
 const mount = Vue.prototype.$mount
 Vue.prototype.$mount = function (
   el?: string | Element,
+  // 非ssr情况下为 false, ssr时候为true
   hydrating?: boolean
 ): Component {
+  // 获取el  dom对象
   el = el && query(el)
 
   /* istanbul ignore if */
+  // el 不能是body 或者 html
   if (el === document.body || el === document.documentElement) {
-    process.env.NODE_ENV !== 'production' && warn(
-      `Do not mount Vue to <html> or <body> - mount to normal elements instead.`
-    )
+    process.env.NODE_ENV !== 'production' &&
+      warn(
+        `Do not mount Vue to <html> or <body> - mount to normal elements instead.`
+      )
     return this
   }
 
   const options = this.$options
   // resolve template/el and convert to render function
+  // 把 template/el 转换成render函数
   if (!options.render) {
     let template = options.template
+    // 如果模板存在
     if (template) {
       if (typeof template === 'string') {
+        // 如果模板是id选择器
         if (template.charAt(0) === '#') {
+          // 获取对应的DOM对象的innerHTML
           template = idToTemplate(template)
           /* istanbul ignore if */
           if (process.env.NODE_ENV !== 'production' && !template) {
@@ -46,14 +59,17 @@ Vue.prototype.$mount = function (
           }
         }
       } else if (template.nodeType) {
+        // 如果模板是元素, 返回元素的 innerHTML
         template = template.innerHTML
       } else {
+         // 以上都不是则 发出警告, 返回当前实例 
         if (process.env.NODE_ENV !== 'production') {
           warn('invalid template option:' + template, this)
         }
         return this
       }
     } else if (el) {
+      // 如果没有 template, 获取el 的 outerHTML 作为模板
       template = getOuterHTML(el)
     }
     if (template) {
@@ -61,14 +77,18 @@ Vue.prototype.$mount = function (
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
         mark('compile')
       }
-
-      const { render, staticRenderFns } = compileToFunctions(template, {
-        outputSourceRange: process.env.NODE_ENV !== 'production',
-        shouldDecodeNewlines,
-        shouldDecodeNewlinesForHref,
-        delimiters: options.delimiters,
-        comments: options.comments
-      }, this)
+      // 把template 转换成 render 函数
+      const { render, staticRenderFns } = compileToFunctions(
+        template,
+        {
+          outputSourceRange: process.env.NODE_ENV !== 'production',
+          shouldDecodeNewlines,
+          shouldDecodeNewlinesForHref,
+          delimiters: options.delimiters,
+          comments: options.comments,
+        },
+        this
+      )
       options.render = render
       options.staticRenderFns = staticRenderFns
 
@@ -79,6 +99,7 @@ Vue.prototype.$mount = function (
       }
     }
   }
+  //   调用mount 方法 , 渲染dom
   return mount.call(this, el, hydrating)
 }
 
@@ -86,7 +107,7 @@ Vue.prototype.$mount = function (
  * Get outerHTML of elements, taking care
  * of SVG elements in IE as well.
  */
-function getOuterHTML (el: Element): string {
+function getOuterHTML(el: Element): string {
   if (el.outerHTML) {
     return el.outerHTML
   } else {

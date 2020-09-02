@@ -13,8 +13,10 @@ export function initEvents (vm: Component) {
   vm._events = Object.create(null)
   vm._hasHookEvent = false
   // init parent attached events
+  // 获取父元素上附加的事件
   const listeners = vm.$options._parentListeners
   if (listeners) {
+    // 注册自定义事件
     updateComponentListeners(vm, listeners)
   }
 }
@@ -51,6 +53,7 @@ export function updateComponentListeners (
 
 export function eventsMixin (Vue: Class<Component>) {
   const hookRE = /^hook:/
+  // 注册事件
   Vue.prototype.$on = function (event: string | Array<string>, fn: Function): Component {
     const vm: Component = this
     if (Array.isArray(event)) {

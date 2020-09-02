@@ -39,6 +39,7 @@ export function createElement (
     data = undefined
   }
   if (isTrue(alwaysNormalize)) {
+    // 该参数是用来处理children的
     normalizationType = ALWAYS_NORMALIZE
   }
   return _createElement(context, tag, data, children, normalizationType)
@@ -57,6 +58,7 @@ export function _createElement (
       'Always create fresh vnode data objects in each render!',
       context
     )
+    // 返回一个空的VNode节点
     return createEmptyVNode()
   }
   // object syntax in v-bind
@@ -87,7 +89,9 @@ export function _createElement (
     data.scopedSlots = { default: children[0] }
     children.length = 0
   }
+  // 用户传来的render函数   :把二维数组转换成一维数组
   if (normalizationType === ALWAYS_NORMALIZE) {
+    // 返回一维数组，处理用户手写的render,判断类型
     children = normalizeChildren(children)
   } else if (normalizationType === SIMPLE_NORMALIZE) {
     children = simpleNormalizeChildren(children)
@@ -96,6 +100,7 @@ export function _createElement (
   if (typeof tag === 'string') {
     let Ctor
     ns = (context.$vnode && context.$vnode.ns) || config.getTagNamespace(tag)
+    // 判断是否是html 的保留标签
     if (config.isReservedTag(tag)) {
       // platform built-in elements
       if (process.env.NODE_ENV !== 'production' && isDef(data) && isDef(data.nativeOn)) {
@@ -108,13 +113,17 @@ export function _createElement (
         config.parsePlatformTagName(tag), data, children,
         undefined, undefined, context
       )
+      // 判断是否是 自定义组件
     } else if ((!data || !data.pre) && isDef(Ctor = resolveAsset(context.$options, 'components', tag))) {
       // component
+      // 查找自定义组件构造函数声明
+      // 根据 Ctor 创建组件的 VNode
       vnode = createComponent(Ctor, data, context, children, tag)
     } else {
       // unknown or unlisted namespaced elements
       // check at runtime because it may get assigned a namespace when its
       // parent normalizes children
+      // 不是html保留标签,组件也没有,那么就是自定义标签
       vnode = new VNode(
         tag, data, children,
         undefined, undefined, context
@@ -122,6 +131,7 @@ export function _createElement (
     }
   } else {
     // direct component options / constructor
+    // tag 不是字符串
     vnode = createComponent(tag, data, context, children)
   }
   if (Array.isArray(vnode)) {

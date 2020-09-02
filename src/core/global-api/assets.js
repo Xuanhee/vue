@@ -3,11 +3,13 @@
 import { ASSET_TYPES } from 'shared/constants'
 import { isPlainObject, validateComponentName } from '../util/index'
 
-export function initAssetRegisters (Vue: GlobalAPI) {
+export function initAssetRegisters(Vue: GlobalAPI) {
   /**
    * Create asset registration methods.
    */
-  ASSET_TYPES.forEach(type => {
+  // 遍历 ASSET_TYPES 数组, 为 Vue 定义相应方法
+  // ASSET_TYPES 包括了 directive、component、filter
+  ASSET_TYPES.forEach((type) => {
     Vue[type] = function (
       id: string,
       definition: Function | Object
@@ -19,13 +21,20 @@ export function initAssetRegisters (Vue: GlobalAPI) {
         if (process.env.NODE_ENV !== 'production' && type === 'component') {
           validateComponentName(id)
         }
+        // 如果组件第二个参数是一个普通对象的形式
         if (type === 'component' && isPlainObject(definition)) {
           definition.name = definition.name || id
+          // Vue.extend是组件配置转变为组件的构造函数
           definition = this.options._base.extend(definition)
         }
+
+        // 对指令第二个参数是函数的处理
         if (type === 'directive' && typeof definition === 'function') {
           definition = { bind: definition, update: definition }
         }
+
+        // 最后都会全局注册, 存储资源并赋值
+        // this.options['components']['comp'] = definition
         this.options[type + 's'][id] = definition
         return definition
       }

@@ -50,6 +50,7 @@ export default class Watcher {
     isRenderWatcher?: boolean
   ) {
     this.vm = vm
+    // 渲染 watcher
     if (isRenderWatcher) {
       vm._watcher = this
     }
@@ -76,7 +77,11 @@ export default class Watcher {
       ? expOrFn.toString()
       : ''
     // parse expression for getter
+
+    // expOrFn 是字符串的时候,例如 watch: { 'person.name': function... }
+    // parsePath('person.name') 返回一个函数获取person.name的值
     if (typeof expOrFn === 'function') {
+      // updateComponent
       this.getter = expOrFn
     } else {
       this.getter = parsePath(expOrFn)
@@ -90,6 +95,7 @@ export default class Watcher {
         )
       }
     }
+    // 渲染watcher 默认是false
     this.value = this.lazy
       ? undefined
       : this.get()
@@ -103,6 +109,7 @@ export default class Watcher {
     let value
     const vm = this.vm
     try {
+      // 如果是渲染watcher 是updateComponent，如果是用户watcher，是获取属性的方法
       value = this.getter.call(vm, vm)
     } catch (e) {
       if (this.user) {
@@ -116,7 +123,9 @@ export default class Watcher {
       if (this.deep) {
         traverse(value)
       }
+      // 把当前watcher从栈里弹出
       popTarget()
+      // 把当前watcher从dep的subs数组中移除并且把watcher中记录的dep也移除
       this.cleanupDeps()
     }
     return value
@@ -131,6 +140,7 @@ export default class Watcher {
       this.newDepIds.add(id)
       this.newDeps.push(dep)
       if (!this.depIds.has(id)) {
+        // 把watcher对象 添加到 dep的 subs数组中
         dep.addSub(this)
       }
     }
@@ -177,6 +187,7 @@ export default class Watcher {
    * Will be called by the scheduler.
    */
   run () {
+    // 标记当前watcher是否是存活状态
     if (this.active) {
       const value = this.get()
       if (
@@ -190,6 +201,7 @@ export default class Watcher {
         // set new value
         const oldValue = this.value
         this.value = value
+        // 如果当前是用户watcher, 调用回调函数， 同时加上try catch
         if (this.user) {
           try {
             this.cb.call(this.vm, value, oldValue)
